@@ -11,6 +11,7 @@ export const createNewUser = async (
   const { firstName, lastName, email, password } = req.body;
   const newUser = new User({
     firstName,
+    lastName,
     email,
     password,
   });
