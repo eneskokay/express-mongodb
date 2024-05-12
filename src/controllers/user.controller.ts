@@ -34,7 +34,7 @@ export const createNewUser = async (
   const result = await newUser.save();
 
   mailTransport.sendMail({
-    from: `verification@vocabzy.com`,
+    from: `verification@vocabzy.ai`,
     to: email,
     subject: "Verify your email address",
     text: `Your verification code is ${verificationCode}`,
