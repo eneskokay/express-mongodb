@@ -1,7 +1,7 @@
-import { log } from "console";
 import { NextFunction, Request, Response } from "express";
-import mongoose, { Error } from "mongoose";
+import mongoose from "mongoose";
 import nodemailer from "nodemailer";
+import { sendCode } from "../emailTemplates/emailVerification";
 
 const User = mongoose.model("user");
 
@@ -21,7 +21,7 @@ export const createNewUser = async (
   next: NextFunction
 ) => {
   const { firstName, lastName, email, password } = req.body;
-  const verificationCode = Math.random().toString(36).substring(7);
+  const verificationCode = Math.random().toString(36).substring(7).toString();
 
   const newUser = new User({
     firstName,
@@ -38,7 +38,14 @@ export const createNewUser = async (
     to: email,
     subject: "Verify your email address",
     text: `Your verification code is ${verificationCode}`,
-    html: `<p>Your verification code is <h3>${verificationCode}</h3></p>`,
+    html: sendCode({
+      code: verificationCode,
+      title: `${firstName} ${lastName}`,
+      subtitle: "Account Activation",
+      text: `Please enter the following code to verify your email address`,
+      footer:
+        "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
+    }),
   });
 
   res.status(201).json({
