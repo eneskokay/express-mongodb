@@ -42,7 +42,7 @@ export const createNewUser = async (
       code: verificationCode,
       title: `${firstName} ${lastName}`,
       subtitle: "Account Activation",
-      text: `Please enter the following code to activate your account`,
+      text: `Please verify your e-mail address using the verification code. The verification code is valid for only 10 minutes.`,
       footer:
         "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
     }),
