@@ -31,7 +31,8 @@ export const createNewUser = async (
     active: false,
     verificationCode: verificationCode,
   });
-  const result = await newUser.save();
+
+  await newUser.save();
 
   mailTransport.sendMail({
     from: `verification@vocabzy.ai`,
@@ -42,7 +43,7 @@ export const createNewUser = async (
       code: verificationCode,
       title: `${firstName} ${lastName}`,
       subtitle: "Account Activation",
-      text: `Please verify your e-mail address using the verification code. The verification code is valid for only 10 minutes.`,
+      text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
       footer:
         "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
     }),
@@ -63,6 +64,11 @@ export const loginUser = async (
   if (!user) {
     res.status(404).json({ message: "Invalid User Informations" });
   }
+  if (user.active && user.password === password) {
+    res
+      .status(200)
+      .json({ message: "The user has been logged in successfully" });
+  }
 };
 
 export const verifyUser = async (
@@ -78,11 +84,57 @@ export const verifyUser = async (
   if (!user) {
     res.status(404).json({ message: "Invalid Information" });
   }
-  // 3 minutes = 180000 milliseconds
-  if (user.createdAt < new Date(Date.now() - 180000)) {
+  // 600000 milliseconds = 10 minutes
+  if (user.createdAt < new Date(Date.now() - 600000)) {
     res.status(404).json({ message: "Verification code expired" });
   }
   user.active = true;
   await user.save();
   res.status(200).json({ message: "The user has been created successfully" });
+};
+
+export const resendVerificationCode = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user.active && user.createdAt > new Date(Date.now() - 600000)) {
+    res
+      .status(404)
+      .json({ message: "Already sent a verification code to the email" });
+  }
+  if (!user) {
+    res.status(404).json({ message: "There is no user with this email" });
+  }
+  if (user.active) {
+    res.status(400).json({ message: "The user is already verified" });
+  }
+
+  const verificationCode = Math.random().toString(36).substring(7).toString();
+
+  user.verificationCode = verificationCode;
+  user.createdAt = new Date();
+  await user.save();
+
+  mailTransport.sendMail({
+    from: `verification@vocabzy.ai`,
+    to: email,
+    subject: "Verify your email address",
+    text: `Your verification code is ${verificationCode}`,
+    html: sendCode({
+      code: verificationCode,
+      title: `${user.firstName} ${user.lastName}`,
+      subtitle: "Account Activation",
+      text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
+      footer:
+        "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
+    }),
+  });
+
+  res.status(201).json({
+    message: "The verification code has been sent to the user's email",
+  });
 };

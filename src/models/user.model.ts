@@ -13,12 +13,28 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      index: true,
-      unique: true, // supposed to be checked ot if it is unique or not
+      unique: true,
       match: [
         /^((?!\.)[\w-_.]*[^.])(@\w+)(\.\w+(\.\w+)?[^.\W])$/gim,
         "Please fill a valid email address",
       ],
+      validate: {
+        validator: async function (email: string) {
+          const user = await (this.constructor as any).findOne({ email });
+          if (user && user.active) return false;
+          if (
+            user &&
+            !user.active &&
+            user.createdAt > new Date(Date.now() - 600000)
+          ) {
+            return false;
+          }
+          if (user && !user.active) {
+            await (this.constructor as any).deleteOne({ email });
+          }
+          return true;
+        },
+      },
     },
     password: {
       type: String,
