@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
 import { sendCode } from "../emailTemplates/emailVerification";
+import jwt from "jsonwebtoken";
 
 const User = mongoose.model("user");
 
@@ -20,19 +21,47 @@ export const createNewUser = async (
   res: Response,
   next: NextFunction
 ) => {
-  const { firstName, lastName, email, password } = req.body;
-  const verificationCode = Math.random().toString(36).substring(7).toString();
+  const { firstName, lastName, email } = req.body;
+
+  const verificationCode = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
 
   const newUser = new User({
     firstName,
     lastName,
     email,
-    password,
     active: false,
     verificationCode: verificationCode,
+    verificationCodeUpdatedAt: new Date(),
+    priced: false,
   });
+  const existUser = await User.findOne({ email });
 
-  await newUser.save();
+  if (!!existUser) {
+    if (existUser.active) {
+      res.status(400).json({ message: "This email is already used" });
+    }
+    if (existUser.verificationCodeUpdatedAt > new Date(Date.now() - 600000)) {
+      res.status(400).json({ message: "The code is already sent!" });
+    }
+    if (!existUser.active) {
+      existUser.verificationCode = verificationCode;
+      existUser.verificationCodeUpdatedAt = new Date();
+      await User.updateOne(
+        { email },
+        {
+          firstName,
+          lastName,
+          email,
+          verificationCode: verificationCode,
+          verificationCodeUpdatedAt: new Date(),
+        }
+      );
+    }
+  } else {
+    await newUser.save();
+  }
 
   mailTransport.sendMail({
     from: `verification@vocabzy.ai`,
@@ -50,27 +79,77 @@ export const createNewUser = async (
   });
 
   res.status(201).json({
-    message: "The verification code has been sent to the user's email",
+    message:
+      "The user has been created successfully, Please verify your email address!",
   });
 };
 
-export const loginUser = async (
+export const loginViaEmail = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const { email, password } = req.body;
+  const { email } = req.body;
   const user = await User.findOne({ email });
   if (!user) {
-    res.status(404).json({ message: "Invalid User Informations" });
+    res.status(404).json({ message: "There is no user with this email" });
   }
-  if (user.active && user.password === password) {
-    res
-      .status(200)
-      .json({ message: "The user has been logged in successfully" });
+  if (user.verificationCodeUpdatedAt < new Date(Date.now() - 600000)) {
+    res.status(400).json({ message: "The code is already sent!" });
   }
+
+  const verificationCode = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+  user.verificationCode = verificationCode;
+  user.verificationCodeUpdatedAt = new Date();
+
+  await user.save();
+
+  if (user.active) {
+    mailTransport.sendMail({
+      from: `verification@vocabzy.ai`,
+      to: email,
+      subject: `Login PIN: ${verificationCode}`,
+      text: `Your verification code is ${verificationCode}`,
+      html: sendCode({
+        code: verificationCode,
+        title: `${user.firstName} ${user.lastName}`,
+        subtitle: "Dear, User",
+        text: `Please use the code provided below to login your account. The code is valid for only 10 minutes.`,
+        footer:
+          "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
+      }),
+    });
+  }
+
+  if (!user.active) {
+    mailTransport.sendMail({
+      from: `verification@vocabzy.ai`,
+      to: email,
+      subject: "Verify your email address",
+      text: `Your verification code is ${verificationCode}`,
+      html: sendCode({
+        code: verificationCode,
+        title: `${user.firstName} ${user.lastName}`,
+        subtitle: "Account Activation",
+        text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
+        footer:
+          "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
+      }),
+    });
+  }
+
+  res.status(200).json({
+    message: "The verification code has been sent to the user's email",
+    userStatus: user.active ? "active" : "inactive",
+  });
 };
 
+/**
+ * @description can be used in both login and signup processess
+ */
 export const verifyUser = async (
   req: Request,
   res: Response,
@@ -81,18 +160,41 @@ export const verifyUser = async (
     email,
     verificationCode,
   });
+
   if (!user) {
-    res.status(404).json({ message: "Invalid Information" });
+    res.status(400).json({ message: "Invalid Information!" });
   }
-  // 600000 milliseconds = 10 minutes
-  if (user.createdAt < new Date(Date.now() - 600000)) {
-    res.status(404).json({ message: "Verification code expired" });
+
+  if (user.verificationCodeUpdatedAt < new Date(Date.now() - 600000)) {
+    res.status(400).json({ message: "Verification code expired" });
   }
-  user.active = true;
-  await user.save();
-  res.status(200).json({ message: "The user has been created successfully" });
+
+  const token = jwt.sign(
+    { userId: user._id },
+    process.env.JWT_SECRET as string,
+    {
+      expiresIn: "1h",
+    }
+  );
+
+  if (!user.active) {
+    // 600000 milliseconds = 10 minutes
+    user.active = true;
+    await user.save();
+    res.status(200).json({
+      message: "The user has been activated and logged in successfully",
+      token: token,
+    });
+  }
+
+  if (user.active) {
+    res.status(200).json({ message: "Logged in successfully", token: token });
+  }
 };
 
+/**
+ * @description can be used only in signup processess, not in login
+ */
 export const resendVerificationCode = async (
   req: Request,
   res: Response,
@@ -101,7 +203,14 @@ export const resendVerificationCode = async (
   const { email } = req.body;
 
   const user = await User.findOne({ email });
-  if (!user.active && user.createdAt > new Date(Date.now() - 600000)) {
+
+  if (!user) {
+    res.status(200).json("No user found with this email");
+  }
+  if (
+    !user.active &&
+    user.verificationCodeUpdatedAt > new Date(Date.now() - 600000)
+  ) {
     res
       .status(404)
       .json({ message: "Already sent a verification code to the email" });
@@ -116,7 +225,7 @@ export const resendVerificationCode = async (
   const verificationCode = Math.random().toString(36).substring(7).toString();
 
   user.verificationCode = verificationCode;
-  user.createdAt = new Date();
+  user.verificationCodeUpdatedAt = new Date();
   await user.save();
 
   mailTransport.sendMail({
@@ -137,4 +246,12 @@ export const resendVerificationCode = async (
   res.status(201).json({
     message: "The verification code has been sent to the user's email",
   });
+};
+
+export const getUserInfos = async (
+  req: any,
+  res: Response,
+  next: NextFunction
+) => {
+  res.status(200).json({ message: "User infos" });
 };
