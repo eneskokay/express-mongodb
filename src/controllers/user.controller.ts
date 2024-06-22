@@ -1,19 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
-import nodemailer from "nodemailer";
 import { sendCode } from "../emailTemplates/emailVerification";
 import jwt from "jsonwebtoken";
-
+import Mailjet from "node-mailjet";
 const User = mongoose.model("user");
 
-// SMTP Connection
-const mailTransport = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: 587,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
+const mailClient = new Mailjet.Client({
+  apiKey: process.env.SMTP_USER,
+  apiSecret: process.env.SMTP_PASS,
 });
 
 export const createNewUser = async (
@@ -63,19 +57,23 @@ export const createNewUser = async (
     await newUser.save();
   }
 
-  mailTransport.sendMail({
-    from: `verification@vocabzy.ai`,
-    to: email,
-    subject: "Verify your email address",
-    text: `Your verification code is ${verificationCode}`,
-    html: sendCode({
-      code: verificationCode,
-      title: `${firstName} ${lastName}`,
-      subtitle: "Account Activation",
-      text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
-      footer:
-        "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
-    }),
+  mailClient.post("send", { version: "v3.1" }).request({
+    Messages: [
+      {
+        From: { Email: `verification@vocabzy.ai`, Name: "vocabzy" },
+        To: { Email: email, Name: firstName },
+        Subject: "Verify your email address",
+        TextPart: `Your verification code is ${verificationCode}`,
+        HtmlPart: sendCode({
+          code: verificationCode,
+          title: `${firstName} ${lastName}`,
+          subtitle: "Account Activation",
+          text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
+          footer:
+            "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
+        }),
+      },
+    ],
   });
 
   res.status(201).json({
@@ -94,8 +92,10 @@ export const loginViaEmail = async (
   if (!user) {
     res.status(404).json({ message: "There is no user with this email" });
   }
-  if (user.verificationCodeUpdatedAt < new Date(Date.now() - 600000)) {
+
+  if (user.verificationCodeUpdatedAt > new Date(Date.now() - 600000)) {
     res.status(400).json({ message: "The code is already sent!" });
+    return undefined;
   }
 
   const verificationCode = Math.floor(
@@ -108,36 +108,44 @@ export const loginViaEmail = async (
   await user.save();
 
   if (user.active) {
-    mailTransport.sendMail({
-      from: `verification@vocabzy.ai`,
-      to: email,
-      subject: `Login PIN: ${verificationCode}`,
-      text: `Your verification code is ${verificationCode}`,
-      html: sendCode({
-        code: verificationCode,
-        title: `${user.firstName} ${user.lastName}`,
-        subtitle: "Dear, User",
-        text: `Please use the code provided below to login your account. The code is valid for only 10 minutes.`,
-        footer:
-          "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
-      }),
+    mailClient.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: { Email: `verification@vocabzy.ai`, Name: "vocabzy" },
+          To: [{ Email: email, Name: user.firstName }],
+          Subject: `Login PIN: ${verificationCode}`,
+          TextPart: `Your verification code is ${verificationCode}`,
+          HtmlPart: sendCode({
+            code: verificationCode,
+            title: `${user.firstName} ${user.lastName}`,
+            subtitle: "Dear, User",
+            text: `Please use the code provided below to login your account. The code is valid for only 10 minutes.`,
+            footer:
+              "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
+          }),
+        },
+      ],
     });
   }
 
   if (!user.active) {
-    mailTransport.sendMail({
-      from: `verification@vocabzy.ai`,
-      to: email,
-      subject: "Verify your email address",
-      text: `Your verification code is ${verificationCode}`,
-      html: sendCode({
-        code: verificationCode,
-        title: `${user.firstName} ${user.lastName}`,
-        subtitle: "Account Activation",
-        text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
-        footer:
-          "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
-      }),
+    mailClient.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: { Email: `verification@vocabzy.ai`, Name: "vocabzy" },
+          To: { Email: email, Name: user.firstName },
+          Subject: "Verify your email address",
+          TextPart: `Your verification code is ${verificationCode}`,
+          HtmlPart: sendCode({
+            code: verificationCode,
+            title: `${user.firstName} ${user.lastName}`,
+            subtitle: "Account Activation",
+            text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
+            footer:
+              "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
+          }),
+        },
+      ],
     });
   }
 
@@ -228,19 +236,23 @@ export const resendVerificationCode = async (
   user.verificationCodeUpdatedAt = new Date();
   await user.save();
 
-  mailTransport.sendMail({
-    from: `verification@vocabzy.ai`,
-    to: email,
-    subject: "Verify your email address",
-    text: `Your verification code is ${verificationCode}`,
-    html: sendCode({
-      code: verificationCode,
-      title: `${user.firstName} ${user.lastName}`,
-      subtitle: "Account Activation",
-      text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
-      footer:
-        "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
-    }),
+  mailClient.post("send", { version: "v3.1" }).request({
+    Messages: [
+      {
+        From: { Email: `verification@vocabzy.ai`, Name: "vocabzy" },
+        To: { Email: email, Name: user.firstName },
+        Subject: "Verify your email address",
+        TextPart: `Your verification code is ${verificationCode}`,
+        HtmlPart: sendCode({
+          code: verificationCode,
+          title: `${user.firstName} ${user.lastName}`,
+          subtitle: "Account Activation",
+          text: `Please verify your email address using the verification code provided below. The code is valid for only 10 minutes.`,
+          footer:
+            "All rights reserved. © 2024 Vocabzy.ai. Unauthorized duplication, reproduction, or distribution in any form, whether in part or in whole, is strictly prohibited and may result in legal action.",
+        }),
+      },
+    ],
   });
 
   res.status(201).json({

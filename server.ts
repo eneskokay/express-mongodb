@@ -25,6 +25,7 @@ require("./src/models/user.model");
 
 // routes
 app.use("/user", require("./src/routes/user.routes"));
+app.use("/dictionary", require("./src/routes/dictionary.routes"));
 
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);

@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 
 const User = mongoose.model("user");
 
-const Authorization = async (req: any, res: Response, next: NextFunction) => {
+const isAuthorized = async (req: any, res: Response, next: NextFunction) => {
   try {
     const decoded = jwt.verify(
       req.header("authorization").split(" ")[1],
@@ -21,4 +21,4 @@ const Authorization = async (req: any, res: Response, next: NextFunction) => {
   }
 };
 
-export { Authorization };
+export { isAuthorized };
