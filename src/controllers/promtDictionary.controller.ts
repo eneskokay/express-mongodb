@@ -11,7 +11,5 @@ export const getPromtResult = async (req: Request, res: Response) => {
     model: "gpt-3.5-turbo",
   });
 
-  console.log("completion:", completion);
-
   res.status(200).json({ result: completion.choices[0] });
 };

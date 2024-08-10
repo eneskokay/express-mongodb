@@ -5,6 +5,7 @@ export const catchErrors = (
 ) => {
   return function (req: Request, res: Response, next: NextFunction) {
     return fn(req, res, next).catch((error: any) => {
+      console.log("why does this not work?");
       res.status(400).json({ message: error.message });
     });
   };

@@ -181,7 +181,7 @@ export const verifyUser = async (
     { userId: user._id },
     process.env.JWT_SECRET as string,
     {
-      expiresIn: "1h",
+      expiresIn: "30d",
     }
   );
 

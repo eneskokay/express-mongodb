@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import express from "express";
 import bodyParser from "body-parser";
 import dotevnc from "dotenv";
+import { wordSchema, userWordActivitySchema } from "./src/models/words.model";
+import { userSchema } from "./src/models/user.model";
 
 const app = express();
 const port = 3000;
@@ -21,11 +23,14 @@ mongoose.connection.on("error", (error: Error) => {
 });
 
 // models
-require("./src/models/user.model");
+mongoose.model("user", userSchema);
+mongoose.model("word", wordSchema);
+mongoose.model("userWordActivity", userWordActivitySchema);
 
 // routes
 app.use("/user", require("./src/routes/user.routes"));
-app.use("/dictionary", require("./src/routes/dictionary.routes"));
+app.use("/dictionary", require("./src/routes/promtDictionary.routes"));
+app.use("/words", require("./src/routes/words.routes"));
 
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
