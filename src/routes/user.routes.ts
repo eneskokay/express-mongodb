@@ -8,7 +8,7 @@ import {
   resendVerificationCode,
   verifyUser,
 } from "../controllers/user.controller";
-import { catchErrors } from "../handlers/errorHandlers";
+import { catchErrors } from "../lib/handlers/errorHandlers";
 import { isAuthorized } from "../middlewares/authorization";
 
 router.post("/register", catchErrors(createNewUser));
