@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 import { sendCode } from "../emailTemplates/emailVerification";
 import jwt from "jsonwebtoken";
 import Mailjet from "node-mailjet";
-const User = mongoose.model("user");
+
+const User = mongoose.model("User");
 
 const mailClient = new Mailjet.Client({
   apiKey: process.env.SMTP_USER,

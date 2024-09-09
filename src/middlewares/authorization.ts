@@ -2,7 +2,7 @@ import { NextFunction, Response } from "express";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
-const User = mongoose.model("user");
+const User = mongoose.model("User");
 
 const isAuthorized = async (req: any, res: Response, next: NextFunction) => {
   try {

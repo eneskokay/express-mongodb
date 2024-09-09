@@ -2,46 +2,16 @@ import mongoose from "mongoose";
 
 export const wordSchema = new mongoose.Schema({
   name: String,
-  category: String,
+  CEFR: String,
   meanings: [
     {
-      name: String,
+      title: String,
       description: String,
+      form: ["noun", "verb", "adjective", "adverb"],
       samples: [String],
-      Synonyms: [String],
+      synonyms: [String],
     },
   ],
 });
 
-export const userWordActivitySchema = new mongoose.Schema({
-  userId: String,
-  categories: [
-    {
-      categoryKey: {
-        type: String,
-        required: true,
-        unique: true, // Ensures categoryKey is unique
-      },
-      learntWordIDs: [
-        {
-          type: String,
-        },
-      ],
-    },
-  ],
-  collections: [
-    {
-      collectionKey: {
-        type: String,
-        required: true,
-        unique: true, // Ensures collectionKey is unique
-      },
-      learntWordIDs: [
-        {
-          type: String,
-        },
-      ],
-    },
-  ],
-  wordsToNotify: [wordSchema],
-});
+export default mongoose.model("Word", wordSchema);

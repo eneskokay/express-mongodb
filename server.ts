@@ -1,14 +1,16 @@
 import mongoose from "mongoose";
 import express from "express";
 import bodyParser from "body-parser";
-import dotevnc from "dotenv";
-import { wordSchema, userWordActivitySchema } from "./src/models/words.model";
-import { userSchema } from "./src/models/user.model";
+import dotenv from "dotenv";
+import { globSync } from "glob";
+import path from "path";
 
 const app = express();
 const port = 3000;
 
-dotevnc.config();
+const envFile = process.env.NODE_ENV === "TEST" ? ".env.test" : ".env";
+
+dotenv.config({ path: envFile });
 
 app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
@@ -22,10 +24,11 @@ mongoose.connection.on("error", (error: Error) => {
   console.error(`2. 🚫 Error → : ${error.message}`);
 });
 
-// models
-mongoose.model("user", userSchema);
-mongoose.model("word", wordSchema);
-mongoose.model("userWordActivity", userWordActivitySchema);
+const modelFiles = globSync("./src/models/**/*.ts");
+
+for (const filePath of modelFiles) {
+  require(path.resolve(filePath));
+}
 
 // routes
 app.use("/user", require("./src/routes/user.routes"));
@@ -35,3 +38,5 @@ app.use("/words", require("./src/routes/words.routes"));
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
+
+module.exports = app;
