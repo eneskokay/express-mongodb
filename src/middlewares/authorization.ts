@@ -17,7 +17,7 @@ const isAuthorized = async (req: any, res: Response, next: NextFunction) => {
     req.priced = user.priced;
     next();
   } catch {
-    res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: "Unauthorized" });
   }
 };
 

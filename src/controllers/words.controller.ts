@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import { NextFunction, Response, Request } from "express";
 import { IAuthorizedRequest } from "../lib/types/commonTypes";
+import { populate } from "dotenv";
 
 const WordModel = mongoose.model("Word");
-const UserWordActivityModel = mongoose.model("UserWordActivity");
 const CollectionModel = mongoose.model("Collection");
 const UserModel = mongoose.model("User");
 
@@ -12,51 +12,41 @@ export const getWordsPartially = async (
   res: Response,
   next: NextFunction
 ) => {
-  const { specificRange, category } = req.body;
+  const { skip, limit } = req.query;
   const user = await UserModel.findOne({ _id: req.userId });
 
   let words;
-  if (specificRange) {
+  if (skip && limit && !isNaN(skip) && !isNaN(limit)) {
     words = await WordModel.find({}, null, {
-      skip: specificRange.skip,
-      limit: specificRange.limit,
+      skip: skip,
+      limit: limit,
     });
   } else {
     words = await WordModel.find();
   }
 
-  res.status(200).json(words);
+  return res.status(200).json(words);
 };
 
 export const getAllCollections = async (
   req: IAuthorizedRequest,
   res: Response
 ) => {
-  const collections = await UserWordActivityModel.aggregate([
-    { $match: { userId: req.userId } }, // Match the user by userId
-    {
-      $project: {
-        _id: 0,
-        collections: {
-          $map: {
-            input: "$collections",
-            as: "collection",
-            in: {
-              // Project all properties except learntWordIds
-              collectionId: "$$collection.collectionId", // Include _id or other needed fields
-              collectionName: "$$collection.collectionName", // Include other fields as needed
-              // Add other fields here that you want to keep
-            },
-          },
-        },
+  const collections = await UserModel.findOne({ _id: req.userId })
+    .populate({
+      path: "collections",
+      populate: {
+        path: "words",
       },
-    },
-  ]);
+    })
+    .then((user) => user.collections);
 
   if (!collections) {
-    res.status(404).json({ message: "Collection Not Found" });
+    return res
+      .status(404)
+      .json({ message: "An error occurred while fetching collections" });
   } else {
-    res.status(200).json({ collections: collections[0].collections });
+    return res.status(200).json({ collections: collections });
   }
 };
 
@@ -66,11 +56,19 @@ export const createCollection = async (
   next: NextFunction
 ) => {
   const { collectionName } = req.body;
-  const newCollection = new CollectionModel({ collectionName: collectionName });
+  const newCollection = new CollectionModel({
+    collectionName: collectionName,
+    words: [],
+  });
+  const saveResult = await newCollection.save();
 
-  await UserWordActivityModel.findOneAndUpdate(
+  if (!saveResult) {
+    return res.status(400).json({ message: "Collection could not be created" });
+  }
+
+  await UserModel.findOneAndUpdate(
     {
-      userId: req.userId,
+      _id: req.userId,
     },
     {
       $addToSet: {
@@ -79,7 +77,10 @@ export const createCollection = async (
     }
   );
 
-  res.status(200).json({ message: "Collection created successfully" });
+  return res.status(200).json({
+    message: "Collection created successfully",
+    collectionId: newCollection._id,
+  });
 };
 
 export const deleteCollection = async (
@@ -88,24 +89,23 @@ export const deleteCollection = async (
 ) => {
   const { collectionId } = req.body;
 
-  const result = await UserWordActivityModel.findOneAndUpdate(
+  const deleteFromCollectionModel = await CollectionModel.findOneAndDelete({
+    _id: collectionId,
+  });
+
+  const deleteFromUserModel = await UserModel.findOneAndUpdate(
     {
-      userId: req.userId,
-      "collections.collectionId": collectionId, // Ensure the collectionId exists
+      _id: req.userId,
     },
     {
-      $pull: { collections: { collectionId } },
-    },
-    {
-      new: true,
-      upsert: false,
+      $pullAll: { collections: [collectionId] },
     }
   );
 
-  if (!result) {
-    res.status(400).json({ message: "Collection not found'" });
+  if (!deleteFromCollectionModel || !deleteFromUserModel) {
+    return res.status(400).json({ message: "Collection not found'" });
   } else {
-    res.status(200).json({ message: "Collection deleted successfully" });
+    return res.status(200).json({ message: "Collection deleted successfully" });
   }
 };
 
@@ -115,23 +115,22 @@ export const addWordToCollection = async (
   next: NextFunction
 ) => {
   const { wordId, collectionId } = req.body;
-
-  const wordActivities = await UserWordActivityModel.findOneAndUpdate(
+  // çöz burayı!
+  const word = await WordModel.findById(wordId).catch((err) => {
+    return res.status(404).json({ message: "Word Not Found" });
+  });
+  console.log("word", word);
+  const collection = await CollectionModel.findOneAndUpdate(
     {
-      userId: req.userId,
-      "collections.collectionId": collectionId,
+      _id: collectionId,
     },
     {
-      $addToSet: { "collections.$.learntWordIDs": wordId },
-    },
-    {
-      new: true,
-      upsert: false,
+      $addToSet: { words: word },
     }
   );
 
-  if (!wordActivities) {
-    res.status(404).json({ message: "Collection Not Found" });
+  if (!collection) {
+    return res.status(404).json({ message: "Collection Not Found" });
   } else {
     res
       .status(200)
@@ -146,13 +145,13 @@ export const removeWordFromCollection = async (
 ) => {
   const { wordId, collectionId } = req.body;
 
-  const wordActivities = await UserWordActivityModel.findOneAndUpdate(
+  const wordActivities = await UserModel.findOneAndUpdate(
     {
-      userId: req.userId,
-      "collections.collectionId": collectionId,
+      _id: req.userId,
+      "collections._id": collectionId,
     },
     {
-      $pull: { "collections.$.learntWordIDs": wordId },
+      $pull: { "collections.$.words": { _id: wordId } },
     },
     {
       new: true,
@@ -161,7 +160,7 @@ export const removeWordFromCollection = async (
   );
 
   if (!wordActivities) {
-    res.status(404).json({ message: "Collection Not Found" });
+    return res.status(404).json({ message: "Collection Not Found" });
   } else {
     res
       .status(200)

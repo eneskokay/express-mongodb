@@ -1,6 +1,7 @@
 import { NextFunction, Response } from "express";
 import * as yup from "yup";
 
+/** @WARNING : Since it validates request's body, This middleware is not available for GET requests.  */
 const validationMiddleware = async (
   req: any,
   res: Response,
@@ -11,7 +12,7 @@ const validationMiddleware = async (
     await validationSchema.validate(req.body);
     next();
   } catch (error: any) {
-    res.status(400).json({ message: error.message });
+    return res.status(400).json({ message: error.message });
   }
 };
 

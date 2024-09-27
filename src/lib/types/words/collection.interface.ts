@@ -1,11 +1,12 @@
 export interface ICollection {
-  collectionId: string;
+  _id: string;
   collectionName: string;
-  learntWordIDs: string[];
+  words: string[];
 }
 
-export interface IDeleteCollectionRequest
-  extends Omit<ICollection, "collectionName" | "learntWordIDs"> {}
+export interface IDeleteCollectionRequest {
+  collectionId: string;
+}
 
 export interface IAddWordToCollectionRequest {
   wordId: string;

@@ -2,14 +2,10 @@ import mongoose from "mongoose";
 import uniqueValidator from "mongoose-unique-validator";
 
 const categorySchema = new mongoose.Schema({
-  categoryId: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  learntWordIDs: [
+  words: [
     {
       type: String,
+      ref: "Word",
     },
   ],
 }).plugin(uniqueValidator);

@@ -7,14 +7,10 @@ const collectionSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  collectionId: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  learntWordIDs: [
+  words: [
     {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Word",
     },
   ],
 }).plugin(uniqueValidator);

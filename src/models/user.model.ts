@@ -28,6 +28,26 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     verificationCodeUpdatedAt: Date,
+    
+    categories: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category",
+      },
+    ],
+    collections: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Collection",
+      },
+    ],
+    wordsToNotify: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Word",
+      },
+    ],
+
     // userDetails: {
     //   nativeLanguage: {
     //     type: String,

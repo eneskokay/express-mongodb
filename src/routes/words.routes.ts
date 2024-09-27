@@ -10,27 +10,57 @@ import {
 import { catchErrors } from "../lib/handlers/errorHandlers";
 import { isAuthorized } from "../middlewares/authorization";
 import validationMiddleware from "../middlewares/validation.middleware";
-import { deleteCollectionSchema } from "../lib/validations/words/collection.validation";
+import validationSchemas from "../lib/validations/validations";
 const router = express.Router();
 
 router.get("/getWordsPartially", isAuthorized, catchErrors(getWordsPartially));
 router.get("/getAllCollections", isAuthorized, catchErrors(getAllCollections));
-router.post("/createCollection", isAuthorized, catchErrors(createCollection));
+router.post(
+  "/createCollection",
+  isAuthorized,
+  (req, res, next) =>
+    validationMiddleware(
+      req,
+      res,
+      next,
+      validationSchemas.createCollectionSchema
+    ),
+  catchErrors(createCollection)
+);
 router.delete(
   "/deleteCollection",
   isAuthorized,
-  (req, res: Response, next) =>
-    validationMiddleware(req, res, next, deleteCollectionSchema),
+  (req, res, next) =>
+    validationMiddleware(
+      req,
+      res,
+      next,
+      validationSchemas.deleteCollectionSchema
+    ),
   catchErrors(deleteCollection)
 );
 router.post(
   "/addWordToCollection",
   isAuthorized,
+  (req, res, next) =>
+    validationMiddleware(
+      req,
+      res,
+      next,
+      validationSchemas.addWordToCollectionSchema
+    ),
   catchErrors(addWordToCollection)
 );
 router.post(
   "/removeWordFromCollection",
   isAuthorized,
+  (req, res, next) =>
+    validationMiddleware(
+      req,
+      res,
+      next,
+      validationSchemas.removeWordFromCollectionSchema
+    ),
   catchErrors(removeWordFromCollection)
 );
 

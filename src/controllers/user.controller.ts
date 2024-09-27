@@ -35,10 +35,10 @@ export const createNewUser = async (
 
   if (!!existUser) {
     if (existUser.active) {
-      res.status(400).json({ message: "This email is already used" });
+      return res.status(400).json({ message: "This email is already used" });
     }
     if (existUser.verificationCodeUpdatedAt > new Date(Date.now() - 600000)) {
-      res.status(400).json({ message: "The code is already sent!" });
+      return res.status(400).json({ message: "The code is already sent!" });
     }
     if (!existUser.active) {
       existUser.verificationCode = verificationCode;
@@ -77,7 +77,7 @@ export const createNewUser = async (
     ],
   });
 
-  res.status(201).json({
+  return res.status(201).json({
     message:
       "The user has been created successfully, Please verify your email address!",
   });
@@ -91,11 +91,13 @@ export const loginViaEmail = async (
   const { email } = req.body;
   const user = await User.findOne({ email });
   if (!user) {
-    res.status(404).json({ message: "There is no user with this email" });
+    return res
+      .status(404)
+      .json({ message: "There is no user with this email" });
   }
 
   if (user.verificationCodeUpdatedAt > new Date(Date.now() - 600000)) {
-    res.status(400).json({ message: "The code is already sent!" });
+    return res.status(400).json({ message: "The code is already sent!" });
     return undefined;
   }
 
@@ -150,7 +152,7 @@ export const loginViaEmail = async (
     });
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     message: "The verification code has been sent to the user's email",
     userStatus: user.active ? "active" : "inactive",
   });
@@ -171,11 +173,11 @@ export const verifyUser = async (
   });
 
   if (!user) {
-    res.status(400).json({ message: "Invalid Information!" });
+    return res.status(400).json({ message: "Invalid Information!" });
   }
 
   if (user.verificationCodeUpdatedAt < new Date(Date.now() - 600000)) {
-    res.status(400).json({ message: "Verification code expired" });
+    return res.status(400).json({ message: "Verification code expired" });
   }
 
   const token = jwt.sign(
@@ -190,14 +192,16 @@ export const verifyUser = async (
     // 600000 milliseconds = 10 minutes
     user.active = true;
     await user.save();
-    res.status(200).json({
+    return res.status(200).json({
       message: "The user has been activated and logged in successfully",
       token: token,
     });
   }
 
   if (user.active) {
-    res.status(200).json({ message: "Logged in successfully", token: token });
+    return res
+      .status(200)
+      .json({ message: "Logged in successfully", token: token });
   }
 };
 
@@ -214,7 +218,7 @@ export const resendVerificationCode = async (
   const user = await User.findOne({ email });
 
   if (!user) {
-    res.status(200).json("No user found with this email");
+    return res.status(200).json("No user found with this email");
   }
   if (
     !user.active &&
@@ -225,10 +229,12 @@ export const resendVerificationCode = async (
       .json({ message: "Already sent a verification code to the email" });
   }
   if (!user) {
-    res.status(404).json({ message: "There is no user with this email" });
+    return res
+      .status(404)
+      .json({ message: "There is no user with this email" });
   }
   if (user.active) {
-    res.status(400).json({ message: "The user is already verified" });
+    return res.status(400).json({ message: "The user is already verified" });
   }
 
   const verificationCode = Math.random().toString(36).substring(7).toString();
@@ -256,7 +262,7 @@ export const resendVerificationCode = async (
     ],
   });
 
-  res.status(201).json({
+  return res.status(201).json({
     message: "The verification code has been sent to the user's email",
   });
 };
@@ -266,5 +272,5 @@ export const getUserInfos = async (
   res: Response,
   next: NextFunction
 ) => {
-  res.status(200).json({ message: "User infos" });
+  return res.status(200).json({ message: "User infos" });
 };
