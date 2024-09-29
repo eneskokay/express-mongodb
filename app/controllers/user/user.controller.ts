@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
-import { sendCode } from "../emailTemplates/emailVerification";
+import { sendCode } from "../../lib/emailTemplates/emailVerification";
 import jwt from "jsonwebtoken";
 import Mailjet from "node-mailjet";
 

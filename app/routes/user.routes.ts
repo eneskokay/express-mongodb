@@ -7,7 +7,7 @@ import {
   loginViaEmail,
   resendVerificationCode,
   verifyUser,
-} from "../controllers/user.controller";
+} from "../controllers/user/user.controller";
 import { catchErrors } from "../lib/handlers/errorHandlers";
 import { isAuthorized } from "../middlewares/authorization";
 

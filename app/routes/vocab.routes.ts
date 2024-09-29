@@ -6,7 +6,7 @@ import {
   getWordsPartially,
   deleteCollection,
   getAllCollections,
-} from "../controllers/words.controller";
+} from "../controllers/vocab/word.controller";
 import { catchErrors } from "../lib/handlers/errorHandlers";
 import { isAuthorized } from "../middlewares/authorization";
 import validationMiddleware from "../middlewares/validation.middleware";

@@ -28,7 +28,6 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     verificationCodeUpdatedAt: Date,
-    
     categories: [
       {
         type: mongoose.Schema.Types.ObjectId,

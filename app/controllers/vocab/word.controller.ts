@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { NextFunction, Response, Request } from "express";
-import { IAuthorizedRequest } from "../lib/types/commonTypes";
+import { IAuthorizedRequest } from "../../lib/types/commonTypes";
 
 const WordModel = mongoose.model("Word");
 const CollectionModel = mongoose.model("Collection");

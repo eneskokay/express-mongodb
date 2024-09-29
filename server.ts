@@ -24,16 +24,17 @@ mongoose.connection.on("error", (error: Error) => {
   console.error(`2. 🚫 Error → : ${error.message}`);
 });
 
-const modelFiles = globSync("./src/models/**/*.ts");
+// run mongoose schemas
+const modelFiles = globSync("./app/models/**/*.ts");
 
 for (const filePath of modelFiles) {
   require(path.resolve(filePath));
 }
 
 // routes
-app.use("/user", require("./src/routes/user.routes"));
-app.use("/dictionary", require("./src/routes/promtDictionary.routes"));
-app.use("/words", require("./src/routes/words.routes"));
+app.use("/user", require("./app/routes/user.routes"));
+app.use("/dictionary", require("./app/routes/dictionary.routes"));
+app.use("/vocab", require("./app/routes/vocab.routes"));
 
 app.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);

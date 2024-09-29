@@ -3,7 +3,7 @@ const router = express.Router();
 
 import { catchErrors } from "../lib/handlers/errorHandlers";
 import { isAuthorized } from "../middlewares/authorization";
-import { getPromtResult } from "../controllers/promtDictionary.controller";
+import { getPromtResult } from "../controllers/dictionary/dictionary.controller";
 
 router.get("/promt", isAuthorized, catchErrors(getPromtResult));
 
