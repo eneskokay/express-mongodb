@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import { NextFunction, Response, Request } from "express";
 import { IAuthorizedRequest } from "../lib/types/commonTypes";
-import { populate } from "dotenv";
 
 const WordModel = mongoose.model("Word");
 const CollectionModel = mongoose.model("Collection");
@@ -13,7 +12,6 @@ export const getWordsPartially = async (
   next: NextFunction
 ) => {
   const { skip, limit } = req.query;
-  const user = await UserModel.findOne({ _id: req.userId });
 
   let words;
   if (skip && limit && !isNaN(skip) && !isNaN(limit)) {
@@ -115,11 +113,9 @@ export const addWordToCollection = async (
   next: NextFunction
 ) => {
   const { wordId, collectionId } = req.body;
-  // çöz burayı!
   const word = await WordModel.findById(wordId).catch((err) => {
     return res.status(404).json({ message: "Word Not Found" });
   });
-  console.log("word", word);
   const collection = await CollectionModel.findOneAndUpdate(
     {
       _id: collectionId,
@@ -144,14 +140,12 @@ export const removeWordFromCollection = async (
   next: NextFunction
 ) => {
   const { wordId, collectionId } = req.body;
-
-  const wordActivities = await UserModel.findOneAndUpdate(
+  const wordActivities = await CollectionModel.findOneAndUpdate(
     {
-      _id: req.userId,
-      "collections._id": collectionId,
+      _id: collectionId,
     },
     {
-      $pull: { "collections.$.words": { _id: wordId } },
+      $pull: { words: wordId },
     },
     {
       new: true,

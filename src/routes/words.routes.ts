@@ -51,7 +51,7 @@ router.post(
     ),
   catchErrors(addWordToCollection)
 );
-router.post(
+router.delete(
   "/removeWordFromCollection",
   isAuthorized,
   (req, res, next) =>
