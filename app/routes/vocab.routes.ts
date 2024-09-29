@@ -3,10 +3,11 @@ import {
   addWordToCollection,
   createCollection,
   removeWordFromCollection,
-  getWordsPartially,
   deleteCollection,
   getAllCollections,
-} from "../controllers/vocab/word.controller";
+} from "../controllers/vocab/collection.controller";
+import { getWordsPartially } from "../controllers/vocab/word.controller";
+
 import { catchErrors } from "../lib/handlers/errorHandlers";
 import { isAuthorized } from "../middlewares/authorization";
 import validationMiddleware from "../middlewares/validation.middleware";
